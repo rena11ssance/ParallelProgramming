@@ -20,9 +20,9 @@ namespace ParallelProgramming
             return userArray;
         }
 
-        static void PrintArray(object userArray)
+        static void PrintArray(Task<int[]> task)
         {
-            int[] temp = (int[]) userArray;
+            int[] temp = task.Result;
             Console.WriteLine("Массив выглядит следующим образом: ");
             for (int i = 0; i < temp.Length; i++)
             {
@@ -32,9 +32,9 @@ namespace ParallelProgramming
             Console.WriteLine();
         }
 
-        static int sumOfArray(object userArray)
+        static int sumOfArray(Task<int[]> task)
         {
-            int[] temp = (int[]) userArray;
+            int[] temp = task.Result;
             if (temp.Length == 0)
             {
                 return 0;
@@ -50,9 +50,9 @@ namespace ParallelProgramming
             return sum;
         }
 
-        static int maxOfArray(object userArray)
+        static int maxOfArray(Task<int[]> task)
         {
-            int[] temp = (int[]) userArray;
+            int[] temp = task.Result;
             if (temp.Length == 0)
             {
                 return 0;
@@ -83,17 +83,18 @@ namespace ParallelProgramming
             firstTask.Start();
 
             Action<Task<int[]>> firstAction = new Action<Task<int[]>>(PrintArray);
-            Task secondTask = firstTask.ContinueWith(PrintArray);
+            Task secondTask = firstTask.ContinueWith(firstAction);
 
-            Func<Action<Task<int[]>>, int> secondFunc = new Func<Action<Task<int[]>>, int>(sumOfArray);
-            Task<int> thirdTask = secondTask.ContinueWith(sumOfArray);
+            Func<Task<int[]>, int> secondFunc = new Func<Task<int[]>, int> (sumOfArray);
+            Task<int> thirdTask = firstTask.ContinueWith<int>(secondFunc);
+
+            Func<Task<int[]>, int> thirdFunc = new Func<Task<int[]>, int> (maxOfArray);
+            Task<int> fourthTask = firstTask.ContinueWith<int>(thirdFunc);
+
+            Task.WaitAll(secondTask, thirdTask, fourthTask);
+
             int sum = thirdTask.Result;
-
-            Func<Action<Task<int[]>>, int> thirdFunc = new Func<Action<Task<int[]>>, int> (maxOfArray);
-            Task<int> fourthTask = thirdTask.ContinueWith(maxOfArray);
             int max = fourthTask.Result;
-
-            Task.WhenAll(secondTask, thirdTask, fourthTask);
 
             Console.WriteLine($"Сумма массива - {sum}, самое большое число в массиве {max}.");
             Console.ReadKey();
